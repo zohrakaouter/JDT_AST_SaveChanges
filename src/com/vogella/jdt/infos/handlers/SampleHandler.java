@@ -93,9 +93,8 @@ public class SampleHandler extends AbstractHandler {
  			    		
  			    		for(IJavaElement javaEle : packageFrag.getChildren()){
  			    			
- 			    			if(javaEle instanceof ICompilationUnit){//alternativley check if the element kind is == 5, it is CompilationUnit
+ 			    			if(javaEle instanceof ICompilationUnit){
  			    				
- 			    				//ICompilationUnit compilUnit = (ICompilationUnit) javaEle;
  			    				ICompilationUnit compilUnit= JavaCore.createCompilationUnitFrom((IFile)javaEle.getCorrespondingResource());
  			    				ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager();
  			    			    
@@ -105,12 +104,9 @@ public class SampleHandler extends AbstractHandler {
  			    			      
  			    			       parser.setBindingsRecovery(true);
  			    			      parser.setSource(compilUnit);
- 			    			     // CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
- 			    			     
- 			    			      //Document document = new Document("import java.util.List;\nclass X {}\n");
- 			    			    //  ASTParser parser = ASTParser.newParser(AST.JLS8);
+ 			    			    
  			    			      parser.setResolveBindings(true);
- 			    			      parser.setKind(ASTParser.K_COMPILATION_UNIT);
+ 			    			     
  			    			     
  			    			      parser.setBindingsRecovery(true);
  			    			    	
@@ -132,99 +128,35 @@ public class SampleHandler extends AbstractHandler {
  			    				 System.out.println("Error found "+ml[i].toString());
  			    				 
  			    				 /** ast part **/
- 			    				 
- 			    		      parser.setResolveBindings(true);
- 			    		      parser.setKind(ASTParser.K_COMPILATION_UNIT);
- 			    		     
- 			    		      parser.setBindingsRecovery(true);
- 			    		    
- 			    		     ImportRewrite rewrite = ImportRewrite.create(cu, true);
- 			    		   		
  			    				
  			    				int start = ml[i].getAttribute(IMarker.CHAR_START, 0);
    			    			    int end = ml[i].getAttribute(IMarker.CHAR_END, 0);
    			    			     
    			    			  NodeFinder nf = new NodeFinder(cu.getRoot(), start, end-start);
-			    			     ASTNode an=nf.getCoveringNode();
+			    			  ASTNode an=nf.getCoveringNode();
 			    			    
 			    			   
 			    			     System.out.println(" ASTNode ERROR: "+an);
-			    			     
-			    			    
-			    			     /** ADD METHOD **/
-			    			  /*   ASTNode astNodeWithMethodBody = createAstNodeWithMethodBody();        
-
-			    			       
-			    			        MethodDeclaration methodDeclaration = ast.newMethodDeclaration();
-			    			        System.out.println(" point 1");
-			    			        methodDeclaration.setName(ast.newSimpleName("myMethod"));
-			    			        System.out.println(" point 2");
-			    			        
-			    			        ASTNode convertedAstNodeWithMethodBody = ASTNode.copySubtree(ast, astNodeWithMethodBody);
-			    			        System.out.println(" point 3");
-			    			        Block block = (Block)convertedAstNodeWithMethodBody;
-			    			        System.out.println(" point 4");
-			    			        methodDeclaration.setBody(block);
-			    			        System.out.println(" point 5");
-
-			    			       
-			    			        TypeDeclaration typeDeclaration = ast.newTypeDeclaration();
-			    			        typeDeclaration.setName(ast.newSimpleName("Example"));
-			    			        typeDeclaration.bodyDeclarations().add(methodDeclaration);
-			    			        astRoot.types().add(typeDeclaration);
-			    			        */
-			    			        /** END ADD METHOD **/ 
-			    			     
-			    			     /**  add method declaration **/
-			    			     
-			    			     
 			    			     
 			    			     /**  end method declaration **/
 			    			     /** Rename type**/
 			    			     
 			    			     if(an instanceof SimpleName)
 			    			     {
-			    			    	 System.out.println("  an is SimpleName");
-			    			    	 //((SimpleName)an).setIdentifier("person2");
+			    			    	 System.out.println("  Retrieved ASTNode is SimpleName");
 			    			    	
-			    			    	 	
 			    			    	 	ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(pathcu);
-			    			    	 	// retrieve the buffer
-			    			    	 	System.out.println( " the new node "+ an);
-			    			    	 	System.out.println( " the aANCIEN node "+ an);
-			    			    	 	
-			    			    	 	rewriter.set((SimpleName)an, ((SimpleName) an).IDENTIFIER_PROPERTY, "testRenamed", null);
-			    			    	 	System.out.println( " the new node "+ an);
-			    			    	 	
+			    			    	 
+			    			    	 	rewriter.set((SimpleName)an, ((SimpleName) an).IDENTIFIER_PROPERTY, "newid", null);
+			    			    	 
 			    			    	
-			    			    	 	textFileBuffer
-			    			    	 		.commit(null , true ); 
+			    			    	 	textFileBuffer.commit(null , false ); 
 
 			    			    	 
 			    			    		
 			    			    	 
 			    			     }
-			    			     else
-			    			     if( an.getParent() instanceof SimpleType)
-			    			     {
-			    			    	/* System.out.println(" here is simpletype ok ");
-			    			    	 SimpleType st= (SimpleType)an.getParent(); 
-			    			      
-			    			         Name n = ast.newName("newname");
-			    			         System.out.println("Qualified name 1"+ st.getName().getFullyQualifiedName());
-			    			        
-			    			
-			    			    	 st.setName(sn);// exception 
-			    			    	 System.out.println("Qualified name 2  "+ st.getName().getFullyQualifiedName());
-    			    			     */
-			    			    	 System.out.println("  an is parent is simpleType");
-				    			    	
-				    			    	 rewriter.set((SimpleName)an, ((SimpleName) an).IDENTIFIER_PROPERTY, "person3", null);
-				    			    	 
-				    			    	 
-			    			    	 
-			    			         
-			    			     }
+			    			    
 			    			     /** END rename type **/
     		       			     
 			    			   /*  Job job = Job.create("Saving changes", monitor -> {
@@ -240,7 +172,7 @@ public class SampleHandler extends AbstractHandler {
 			    			   
    			    			     
  			    				 }
- 			    				//bufferManager.disconnect(pathcu,LocationKind.IFILE, new NullProgressMonitor());
+ 			    				bufferManager.disconnect(pathcu,LocationKind.IFILE, new NullProgressMonitor());
  			    				
  			    				}
  			    				
@@ -336,7 +268,7 @@ public class SampleHandler extends AbstractHandler {
 		 System.out.println(" Compilation unit path : "+ cu.getPath());
 		 
 		      IResource javaSourceFile = cu.getUnderlyingResource();
-		      System.out.println("check ressource "+ javaSourceFile.getFileExtension());
+		     
 		      IMarker[] markers = 
 		         javaSourceFile.findMarkers(IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER,
 		            true, IResource.DEPTH_INFINITE);
