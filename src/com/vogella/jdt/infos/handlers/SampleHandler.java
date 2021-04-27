@@ -12,9 +12,12 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -22,6 +25,8 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaModelMarker;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IPackageFragment;
@@ -37,17 +42,23 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.TextEdit;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.filebuffers.*;
 
 public class SampleHandler extends AbstractHandler {
 	 private static final String JDT_NATURE = "org.eclipse.jdt.core.javanature";
@@ -60,52 +71,196 @@ public class SampleHandler extends AbstractHandler {
 				"Hello, Eclipse world");
 		
 		System.out.println(" in plugin");
-		IWorkspace workspace= ResourcesPlugin.getWorkspace();
-       
-		IPath path = new Path("TestVog2/src/testvog2.java");
-      IFile file = workspace.getRoot().getFile(path);
+		
+		try 
+        {
+		//IPath path = new Path("TestVog2/src/testvog2.java");
+		IPath path = new Path("TestWithErrors");
+		IProject myproject = ResourcesPlugin.getWorkspace().getRoot().getProject(path.lastSegment());
+		 IProgressMonitor myProgressMonitor=new NullProgressMonitor();
+		 
+         myproject.build(IncrementalProjectBuilder.INCREMENTAL_BUILD, myProgressMonitor);
+         if (myproject.hasNature(JavaCore.NATURE_ID)) {
+			    IJavaProject javaProject = JavaCore.create(myproject);
+			    javaProject.open(null);
+			     //javaProject.getResource().refreshLocal(IResource.DEPTH_INFINITE, null);
+			    
+			    for(IPackageFragment packageFrag : javaProject.getPackageFragments()){
+			    	
+			    	
+			    	if(packageFrag.getPath().getFileExtension() == null){
+ 			    		
+ 			    		
+ 			    		for(IJavaElement javaEle : packageFrag.getChildren()){
+ 			    			
+ 			    			if(javaEle instanceof ICompilationUnit){//alternativley check if the element kind is == 5, it is CompilationUnit
+ 			    				
+ 			    				//ICompilationUnit compilUnit = (ICompilationUnit) javaEle;
+ 			    				ICompilationUnit compilUnit= JavaCore.createCompilationUnitFrom((IFile)javaEle.getCorrespondingResource());
+ 			    				ITextFileBufferManager bufferManager = FileBuffers.getTextFileBufferManager();
+ 			    			    
+ 			    				ASTParser parser = ASTParser.newParser(AST.JLS8);
+ 			    			       parser.setResolveBindings(true);
+ 			    			       parser.setKind(ASTParser.K_COMPILATION_UNIT);
+ 			    			      
+ 			    			       parser.setBindingsRecovery(true);
+ 			    			      parser.setSource(compilUnit);
+ 			    			     // CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
+ 			    			     
+ 			    			      //Document document = new Document("import java.util.List;\nclass X {}\n");
+ 			    			    //  ASTParser parser = ASTParser.newParser(AST.JLS8);
+ 			    			      parser.setResolveBindings(true);
+ 			    			      parser.setKind(ASTParser.K_COMPILATION_UNIT);
+ 			    			     
+ 			    			      parser.setBindingsRecovery(true);
+ 			    			    	
+ 			    			     CompilationUnit cu = (CompilationUnit) parser.createAST( null);
+ 			    			    IPath pathcu = cu.getJavaElement().getPath(); // unit: instance of CompilationUnit
+ 			    			   bufferManager.connect(pathcu, null); 
+ 			    			   System.out.println(" in pathcu "+pathcu.toString());
+ 			    			  
+ 			    			  
+ 			    			     AST ast= cu.getAST();
+ 			    			    ASTRewrite rewriter = ASTRewrite.create(ast);
+ 			    				if (compilUnit != null) {
+ 			    				 System.out.println("Compilation unit : "+compilUnit.getElementName());
+ 			    				
+ 			    	            IMarker[] ml =findJavaProblemMarkers(compilUnit);
+ 			    				System.out.println("ERRORS' Number: "+ml.length); 
+ 			    				for (int i = 0; i < ml.length; ++i) {
+ 			    					 
+ 			    				 System.out.println("Error found "+ml[i].toString());
+ 			    				 
+ 			    				 /** ast part **/
+ 			    				 
+ 			    		      parser.setResolveBindings(true);
+ 			    		      parser.setKind(ASTParser.K_COMPILATION_UNIT);
+ 			    		     
+ 			    		      parser.setBindingsRecovery(true);
+ 			    		    
+ 			    		     ImportRewrite rewrite = ImportRewrite.create(cu, true);
+ 			    		   		
+ 			    				
+ 			    				int start = ml[i].getAttribute(IMarker.CHAR_START, 0);
+   			    			    int end = ml[i].getAttribute(IMarker.CHAR_END, 0);
+   			    			     
+   			    			  NodeFinder nf = new NodeFinder(cu.getRoot(), start, end-start);
+			    			     ASTNode an=nf.getCoveringNode();
+			    			    
+			    			   
+			    			     System.out.println(" ASTNode ERROR: "+an);
+			    			     
+			    			    
+			    			     /** ADD METHOD **/
+			    			  /*   ASTNode astNodeWithMethodBody = createAstNodeWithMethodBody();        
+
+			    			       
+			    			        MethodDeclaration methodDeclaration = ast.newMethodDeclaration();
+			    			        System.out.println(" point 1");
+			    			        methodDeclaration.setName(ast.newSimpleName("myMethod"));
+			    			        System.out.println(" point 2");
+			    			        
+			    			        ASTNode convertedAstNodeWithMethodBody = ASTNode.copySubtree(ast, astNodeWithMethodBody);
+			    			        System.out.println(" point 3");
+			    			        Block block = (Block)convertedAstNodeWithMethodBody;
+			    			        System.out.println(" point 4");
+			    			        methodDeclaration.setBody(block);
+			    			        System.out.println(" point 5");
+
+			    			       
+			    			        TypeDeclaration typeDeclaration = ast.newTypeDeclaration();
+			    			        typeDeclaration.setName(ast.newSimpleName("Example"));
+			    			        typeDeclaration.bodyDeclarations().add(methodDeclaration);
+			    			        astRoot.types().add(typeDeclaration);
+			    			        */
+			    			        /** END ADD METHOD **/ 
+			    			     
+			    			     /**  add method declaration **/
+			    			     
+			    			     
+			    			     
+			    			     /**  end method declaration **/
+			    			     /** Rename type**/
+			    			     
+			    			     if(an instanceof SimpleName)
+			    			     {
+			    			    	 System.out.println("  an is SimpleName");
+			    			    	 //((SimpleName)an).setIdentifier("person2");
+			    			    	
+			    			    	 	
+			    			    	 	ITextFileBuffer textFileBuffer = bufferManager.getTextFileBuffer(pathcu);
+			    			    	 	// retrieve the buffer
+			    			    	 	System.out.println( " the new node "+ an);
+			    			    	 	System.out.println( " the aANCIEN node "+ an);
+			    			    	 	
+			    			    	 	rewriter.set((SimpleName)an, ((SimpleName) an).IDENTIFIER_PROPERTY, "testRenamed", null);
+			    			    	 	System.out.println( " the new node "+ an);
+			    			    	 	
+			    			    	
+			    			    	 	textFileBuffer
+			    			    	 		.commit(null , true ); 
+
+			    			    	 
+			    			    		
+			    			    	 
+			    			     }
+			    			     else
+			    			     if( an.getParent() instanceof SimpleType)
+			    			     {
+			    			    	/* System.out.println(" here is simpletype ok ");
+			    			    	 SimpleType st= (SimpleType)an.getParent(); 
+			    			      
+			    			         Name n = ast.newName("newname");
+			    			         System.out.println("Qualified name 1"+ st.getName().getFullyQualifiedName());
+			    			        
+			    			
+			    			    	 st.setName(sn);// exception 
+			    			    	 System.out.println("Qualified name 2  "+ st.getName().getFullyQualifiedName());
+    			    			     */
+			    			    	 System.out.println("  an is parent is simpleType");
+				    			    	
+				    			    	 rewriter.set((SimpleName)an, ((SimpleName) an).IDENTIFIER_PROPERTY, "person3", null);
+				    			    	 
+				    			    	 
+			    			    	 
+			    			         
+			    			     }
+			    			     /** END rename type **/
+    		       			     
+			    			   /*  Job job = Job.create("Saving changes", monitor -> {
+			 			    			try {
+
+			 			    		     saveChanges((ICompilationUnit) cu.getJavaElement(),monitor,rewriter,rewrite);
+			 			    			}
+			 			    			catch(Exception e) {}
+			 			    			});
+			 			    		job.schedule();
+			 			    		*/
+			    			    /** AST part end **/
+			    			   
+   			    			     
+ 			    				 }
+ 			    				//bufferManager.disconnect(pathcu,LocationKind.IFILE, new NullProgressMonitor());
+ 			    				
+ 			    				}
+ 			    				
+ 			    				
+ 			    			}
+ 			    		}
+ 			    				 
+ 			    	}
+			    }
+			    
+         }
+         }
+         catch (Exception e)
+         {
+        	 
+         }
+      //IFile file = workspace.getRoot().getFile(path);
       // CompilationUnit compilationUnit =(CompilationUnit) JavaCore.create(file);
-     ICompilationUnit element= JavaCore.createCompilationUnitFrom(file);
-     ASTParser parser = ASTParser.newParser(AST.JLS8);
-       parser.setResolveBindings(true);
-       parser.setKind(ASTParser.K_COMPILATION_UNIT);
-      
-       parser.setBindingsRecovery(true);
-      parser.setSource(element);
-     // CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
+   //  ICompilationUnit element= JavaCore.createCompilationUnitFrom(file);
      
-      //Document document = new Document("import java.util.List;\nclass X {}\n");
-    //  ASTParser parser = ASTParser.newParser(AST.JLS8);
-      parser.setResolveBindings(true);
-      parser.setKind(ASTParser.K_COMPILATION_UNIT);
-     
-      parser.setBindingsRecovery(true);
-    		 // parser.setSource(document.get().toCharArray());
-      
-     CompilationUnit cu = (CompilationUnit) parser.createAST( null);
-     AST ast= cu.getAST();
-      ImportDeclaration id =ast.newImportDeclaration();
-      id.setName(ast.newName(new String[] {"java","util","collection"}));
-   ASTRewrite rewriter = ASTRewrite.create(ast);
-   ImportRewrite rewrite = ImportRewrite.create(cu, true);
-   ListRewrite lrw = rewriter.getListRewrite(cu,CompilationUnit.IMPORTS_PROPERTY);
-lrw.insertLast(id, null);
-    // TextEdit edits = rewriter.rewriteAST(document,null);
- 
-     
-    
-IProgressMonitor myProgressMonitor=new NullProgressMonitor();
-IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(path.lastSegment());
-
-
-Job job = Job.create("Setting the classpath", monitor -> {
-	try {
-
-     saveChanges((ICompilationUnit) cu.getJavaElement(),monitor,rewriter,rewrite);
-	}
-	catch(Exception e) {}
-	});
-job.schedule();
      
      // assert "import java.util.List; \nimport java.util.Set;\nclass X {}\n".equals(document.get());
       
@@ -175,6 +330,21 @@ job.schedule();
 
         }
     }
+    public IMarker[] findJavaProblemMarkers(ICompilationUnit cu) 
+		      throws CoreException {
+	
+		 System.out.println(" Compilation unit path : "+ cu.getPath());
+		 
+		      IResource javaSourceFile = cu.getUnderlyingResource();
+		      System.out.println("check ressource "+ javaSourceFile.getFileExtension());
+		      IMarker[] markers = 
+		         javaSourceFile.findMarkers(IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER,
+		            true, IResource.DEPTH_INFINITE);
+		     if(markers.length==0)
+		      System.out.println("No error detected ");
+		      return markers;
+
+		   }
     private void createPackage(IProject project) throws JavaModelException {
         IJavaProject javaProject = JavaCore.create(project);
         IFolder folder = project.getFolder("src");
@@ -214,8 +384,11 @@ job.schedule();
     }
     protected void saveChanges(ICompilationUnit cu, IProgressMonitor monitor, final ASTRewrite rewriter,
     ImportRewrite importRewrite) throws CoreException,JavaModelException,BadLocationException {
-   TextEdit importEdits = importRewrite.rewriteImports(monitor);
-   TextEdit edits = rewriter.rewriteAST(); 	
+   
+    	
+    	TextEdit importEdits = importRewrite.rewriteImports(monitor);
+    	
+    	TextEdit edits = rewriter.rewriteAST(); 	
    importEdits.addChild(edits);
        Document document = new Document(cu.getSource());
         importEdits.apply(document);
@@ -225,6 +398,7 @@ job.schedule();
        cu.save(monitor,true);
         
     }
+    
 
     private void createAST(IPackageFragment mypackage) throws JavaModelException {
         for (ICompilationUnit unit : mypackage.getCompilationUnits()) {
