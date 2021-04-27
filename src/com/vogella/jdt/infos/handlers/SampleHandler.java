@@ -151,10 +151,9 @@ public class SampleHandler extends AbstractHandler {
 			    			    	 
 			    			    	
 			    			    	 	textFileBuffer.commit(null , false ); 
-
+			    			    	 	
 			    			    	 
-			    			    		
-			    			    	 
+	 
 			    			     }
 			    			    
 			    			     /** END rename type **/
