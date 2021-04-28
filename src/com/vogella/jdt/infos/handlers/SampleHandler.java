@@ -103,7 +103,7 @@ public class SampleHandler extends AbstractHandler {
  			    			       parser.setKind(ASTParser.K_COMPILATION_UNIT);
  			    			      
  			    			       parser.setBindingsRecovery(true);
- 			    			      parser.setSource(compilUnit);
+ 			    			       parser.setSource(compilUnit);
  			    			    
  			    			      parser.setResolveBindings(true);
  			    			     
@@ -111,8 +111,8 @@ public class SampleHandler extends AbstractHandler {
  			    			      parser.setBindingsRecovery(true);
  			    			    	
  			    			     CompilationUnit cu = (CompilationUnit) parser.createAST( null);
- 			    			    IPath pathcu = cu.getJavaElement().getPath(); // unit: instance of CompilationUnit
- 			    			   bufferManager.connect(pathcu, null); 
+ 			    			    IPath pathcu = cu.getJavaElement().getPath();
+ 			    			   bufferManager.connect(pathcu,LocationKind.IFILE, myProgressMonitor); 
  			    			   System.out.println(" in pathcu "+pathcu.toString());
  			    			  
  			    			  
